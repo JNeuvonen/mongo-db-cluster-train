@@ -1,0 +1,14 @@
+Binance klines CSV data order
+
+// Kline open time
+// Open price
+// High price
+// Low price
+// Close price
+// Volume
+// Kline Close time
+// Quote asset volume
+// Number of trades
+// Taker buy base asset volume
+// Taker buy quote asset volume
+// Unused field, ignore

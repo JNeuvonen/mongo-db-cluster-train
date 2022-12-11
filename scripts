@@ -1,0 +1,2 @@
+python3 extract_zip_file.py; python3 main.py
+python3 load_collection.py
