@@ -3,7 +3,7 @@
 
 import math
 from src.utils.constants import COLNAME_TO_KEY, ROWS_FOR_24h, ROWS_FOR_1h
-import time
+import datetime
 
 
 def generate_ts_to_index_lookup_table(data):
@@ -17,26 +17,26 @@ def generate_ts_to_index_lookup_table(data):
     return ret
 
 
-def get_data_from_btc_row(data, train_data_row, btc_row_index):
+def get_sma_values_for_row(data, train_data_row, curr_row_index, key_pre_fix):
 
     # sma time windows
     rows_for_week = ROWS_FOR_24h * 7
     rows_for_24h = ROWS_FOR_24h
-    rows_for_1h = 12
+    rows_for_1h = ROWS_FOR_1h
 
-    if btc_row_index - rows_for_week < 0:
+    if curr_row_index - rows_for_week < 0:
         return None
 
-    sma_week = get_btc_sma_values(data, btc_row_index, rows_for_week)
-    sma_24h = get_btc_sma_values(data, btc_row_index, rows_for_24h)
-    sma_1h = get_btc_sma_values(data, btc_row_index, rows_for_1h)
+    sma_week = sma_values(data, curr_row_index, rows_for_week, key_pre_fix)
+    sma_24h = sma_values(data, curr_row_index, rows_for_24h, key_pre_fix)
+    sma_1h = sma_values(data, curr_row_index, rows_for_1h, key_pre_fix)
 
     insert_sma_dict_into_final_data_row(train_data_row, sma_week, '168h')
     insert_sma_dict_into_final_data_row(train_data_row, sma_24h, '24h')
     insert_sma_dict_into_final_data_row(train_data_row, sma_1h, '1h')
 
 
-def get_btc_sma_values(data, end_index, target_rows):
+def sma_values(data, end_index, target_rows, key_pre_fix):
 
     index = end_index - target_rows
 
@@ -68,20 +68,24 @@ def get_btc_sma_values(data, end_index, target_rows):
     (open_price, vol, num_of_trades,
      tkr_buy_bse_vol, tkr_buy_qte_vol, hi_low_diff) = get_values_from_btc_row(latest_btc_tick)
 
-    sma_open = sma_open / target_rows / open_price - 1
-    sma_vol = sma_vol / target_rows / vol - 1
-    sma_num_trades = sma_num_trades / target_rows / num_of_trades - 1
-    sma_tkr_buy_bse_vol = sma_tkr_buy_bse_vol / target_rows / tkr_buy_bse_vol - 1
-    sma_tkr_buy_qte_vol = sma_tkr_buy_qte_vol / target_rows / tkr_buy_qte_vol - 1
-    sma_high_low_diff = sma_high_low_diff / target_rows / hi_low_diff - 1
+    sma_open = div_by_zero_guard(sma_open / target_rows, open_price, 1) - 1
+    sma_vol = div_by_zero_guard(sma_vol / target_rows, vol, 1) - 1
+    sma_num_trades = div_by_zero_guard(
+        sma_num_trades / target_rows, num_of_trades, 1) - 1
+    sma_tkr_buy_bse_vol = div_by_zero_guard(
+        sma_tkr_buy_bse_vol / target_rows, tkr_buy_bse_vol, 1) - 1
+    sma_tkr_buy_qte_vol = div_by_zero_guard(
+        sma_tkr_buy_qte_vol / target_rows, tkr_buy_qte_vol, 1) - 1
+    sma_high_low_diff = div_by_zero_guard(
+        sma_high_low_diff / target_rows, hi_low_diff, 1) - 1
 
     return {
-        "open": sma_open,
-        "vol": sma_vol,
-        "num_trades": sma_num_trades,
-        "tkr_buy_bse_vol": sma_tkr_buy_bse_vol,
-        "tkr_buy_qte_vol": sma_tkr_buy_qte_vol,
-        "hi_low_diff": sma_high_low_diff
+        key_pre_fix + "_" + "open": sma_open,
+        key_pre_fix + "_" + "vol": sma_vol,
+        key_pre_fix + "_" + "num_trades": sma_num_trades,
+        key_pre_fix + "_" + "tkr_buy_bse_vol": sma_tkr_buy_bse_vol,
+        key_pre_fix + "_" + "tkr_buy_qte_vol": sma_tkr_buy_qte_vol,
+        key_pre_fix + "_" + "hi_low_diff": sma_high_low_diff
     }
 
 
@@ -96,14 +100,28 @@ def get_values_from_btc_row(data_row):
 
     bse_vol = data_row[COLNAME_TO_KEY['Vol']]
     qte_vol = data_row[COLNAME_TO_KEY['Quote asset volume']]
-    high = data_row[COLNAME_TO_KEY['High']]
-    low = data_row[COLNAME_TO_KEY['Low']]
-    close = data_row[COLNAME_TO_KEY['Close']]
+    high = data_row[COLNAME_TO_KEY['High']] * 1000
+    low = data_row[COLNAME_TO_KEY['Low']] * 1000
+    close = data_row[COLNAME_TO_KEY['Close']] * 1000
 
     return (data_row[COLNAME_TO_KEY['Open']],
             bse_vol,
             data_row[COLNAME_TO_KEY['Number of trades']],
-            data_row[COLNAME_TO_KEY['Taker buy base asset vol']] / bse_vol,
-            data_row[COLNAME_TO_KEY['Taker buy quote asset vol']] / qte_vol,
+            div_by_zero_guard(
+                data_row[COLNAME_TO_KEY['Taker buy base asset vol']], bse_vol, 0),
+            div_by_zero_guard(
+                data_row[COLNAME_TO_KEY['Taker buy quote asset vol']], qte_vol, 0),
             (high - low) / close
             )
+
+
+def div_by_zero_guard(dividend, divisor, fallback_val):
+
+    if divisor == 0:
+        return fallback_val
+
+    return dividend / divisor
+
+
+def difference_in_milliseconds(date_start, date_end):
+    return int((date_end-date_start).total_seconds() * 1000)
