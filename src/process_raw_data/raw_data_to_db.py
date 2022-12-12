@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from process_raw_data.constants import KLINES_COL_KEYS
+from src.utils.constants import KLINES_COL_KEYS
 
 
 def write_csv_to_db(db, path):
