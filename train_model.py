@@ -80,7 +80,11 @@ def train_model():
                 optimizer.step()
                 epoch_loss += loss.item()
 
+        epoch_loss = math.sqrt(epoch_loss / total_docs)
+
         print(f'Epoch {epoch+1}: loss = {epoch_loss:.5f}')
+
+    torch.save(model, 'model.pt')
 
 
 train_model()
