@@ -1,3 +1,8 @@
+
+ROWS_FOR_24h = 288
+ROWS_FOR_1h = 12
+
+
 KLINES_COLNAMES = ['Kline open time', 'Open', 'High', 'Low', 'Close', 'Vol', 'Kline Close time',
                    'Quote asset volume', 'Number of trades', 'Taker buy base asset vol', 'Taker buy quote asset vol', 'Ignore']
 KLINES_COL_KEYS = ['k', 'o', 'h', 'l', 'c',
@@ -38,5 +43,17 @@ COLNAME_TO_KEY = {
     "Ignore": "Ignore"
 }
 
-ROWS_FOR_24h = 288
-ROWS_FOR_1h = 12
+
+def format_win_len(win_length):
+    if win_length == ROWS_FOR_24h * 7:
+        return '168h'
+
+    if win_length == ROWS_FOR_24h:
+        return '24h'
+
+    if win_length == ROWS_FOR_1h:
+        return '1h'
+
+
+def get_key_with_suffix(key, suffix):
+    return COLNAME_TO_KEY[key] + "_" + suffix
