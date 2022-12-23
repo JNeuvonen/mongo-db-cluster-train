@@ -1,4 +1,6 @@
 python3 extract_zip_file.py; python3 main.py
 python3 src/process_raw_data/load_collection.py
 python3 generate_train_data.py
+python3 train_model.py
+python3 test_model.py
 source env/bin/activate
