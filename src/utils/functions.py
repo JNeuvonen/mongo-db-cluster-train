@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
 
-import math
-from src.utils.constants import COLNAME_TO_KEY, ROWS_FOR_24h, ROWS_FOR_1h
-import datetime
+from src.utils.constants import COLNAME_TO_KEY, ROWS_FOR_24h, ROWS_FOR_1h, get_key_with_suffix, format_win_len
 
 
 def generate_ts_to_index_lookup_table(data):
@@ -125,3 +123,33 @@ def div_by_zero_guard(dividend, divisor, fallback_val):
 
 def difference_in_milliseconds(date_start, date_end):
     return int((date_end-date_start).total_seconds() * 1000)
+
+
+def add_sma_from_binance_kline(df, data, win_len):
+
+    NOT_INCLUDED_COLS = [get_key_with_suffix(
+        'Kline open time', 'y'), get_key_with_suffix('Kline closet time', 'y')]
+
+    df['target'] = data[get_key_with_suffix(
+        'Open', 'x')].shift(-30) / data[get_key_with_suffix('Open', 'x')] - 1
+
+    for key in COLNAME_TO_KEY:
+        x_key = get_key_with_suffix(key, 'x')
+        y_key = get_key_with_suffix(key, 'y')
+
+        if y_key in NOT_INCLUDED_COLS:
+            continue
+
+        if x_key in data:
+
+            df[f'sma_{x_key.lower()}_alt_' +
+               format_win_len(win_len)] = data[x_key
+                                               ].rolling(win_len).mean() / data[x_key] - 1
+
+        if y_key in data:
+
+            df[f'sma_{y_key.lower()}_btc_' +
+               format_win_len(win_len)] = data[y_key
+                                               ].rolling(win_len).mean() / data[y_key] - 1
+
+    df.dropna(axis=0, inplace=True)
