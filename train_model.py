@@ -15,7 +15,6 @@ def train_model():
 
     # DATA
     coll = client(database='train')['data']
-    DOCS_LIMIT = 100000
 
     # MODEL PARAMETERS
     NUM_INPUTS = 0
@@ -42,7 +41,7 @@ def train_model():
         epoch_loss = 0
         total_docs = 0
 
-        for doc in coll.find({}).limit(DOCS_LIMIT):
+        for doc in coll.find({}):
             df = pd.DataFrame(doc, index=range(len(doc.keys())))
             docs.append(df)
             total_docs += df.shape[0]
@@ -65,7 +64,6 @@ def train_model():
                 y = y.reshape(len(y), 1)
 
                 x = torch.nn.functional.normalize(x)
-                y = torch.nn.functional.normalize(y)
 
                 x = torch.where(torch.isnan(
                     x), torch.zeros_like(x), x)
